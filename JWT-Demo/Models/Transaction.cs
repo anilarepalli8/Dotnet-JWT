@@ -16,6 +16,10 @@ namespace JWT_Demo.Models
         [StringLength(20)]
         public string Type { get; set; } // Type of transaction: "Deposit", "Withdraw", or "Transfer"
 
+
+        public int? ReceiverAccountNumber { get; set; } = null;
+
+
         [Required]
         [Column(TypeName = "decimal(18, 2)")]
         public decimal Amount { get; set; } // Amount involved in the transaction

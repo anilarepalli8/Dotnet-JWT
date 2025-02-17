@@ -1,5 +1,6 @@
 ﻿using JWT_Demo.DTO;
 using JWT_Demo.Models;
+using System.Collections.Generic;
 
 namespace JWT_Demo.Repository
 {
@@ -7,12 +8,12 @@ namespace JWT_Demo.Repository
     {
         bool register(RegisterDto registerDto);
         User login(string userName,string password);
-
         User getDetails(string userId);
-
         decimal deposit(string userId,decimal amount);
         decimal withdraw(string userId, decimal amount);
         decimal transfer(string userId, decimal amount, int accountnumber);
+        IEnumerable<Transaction> getHistory(string userId);
+
         
     }
 }

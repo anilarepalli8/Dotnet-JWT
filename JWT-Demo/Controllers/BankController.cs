@@ -97,6 +97,21 @@ namespace JWT_Demo.Controllers
             return Ok(new { Balance = balance });
         }
 
+        [HttpGet("transactions")]
+        [Authorize]
+        public async Task<IActionResult> getTransactions()
+        {
+            string token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "").Trim();
+            string userId = _jwthelper.ValidateJwtToken(token);
+
+            if (string.IsNullOrEmpty(userId)) return Unauthorized("Invalid or missing token");
+
+            IEnumerable<Transaction> transactions = _bankRepository.getHistory(userId);
+            return (transactions!=null)? Ok(transactions):NotFound("No Transactions arev done by you");
+        }
+
+
+
         [HttpPost("logout")]
         [Authorize]
         public IActionResult Logout()

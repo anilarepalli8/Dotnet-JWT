@@ -47,6 +47,13 @@ namespace JWT_Demo.Repository
         {
             var user = _dbContext.Users.FirstOrDefault(u => u.UserId.Equals(userId));
             user.Balance += amount;
+            var transaction = new Transaction()
+            {
+                UserId = userId,
+                Type = "Deposit",
+                Amount = amount
+            };
+            _dbContext.Transactions.Add(transaction);
             return (_dbContext.SaveChanges()>0) ? user.Balance : throw new Error("Unable to Deposit");
         }
 
@@ -55,6 +62,13 @@ namespace JWT_Demo.Repository
             var user = _dbContext.Users.FirstOrDefault(u => u.UserId.Equals(userId));
               if (user.Balance < amount) throw new Error("Insufficient Balance");
             user.Balance -= amount;
+            var transaction = new Transaction()
+            {
+                UserId = userId,
+                Type = "Withdrawl",
+                Amount = amount
+            };
+            _dbContext.Transactions.Add(transaction);
             return (_dbContext.SaveChanges() > 0) ? user.Balance : throw new Error("Unable to Withdraw");
         }
 
@@ -65,8 +79,22 @@ namespace JWT_Demo.Repository
             var receiverAccount = _dbContext.Users.FirstOrDefault(u => u.AccountNumber.Equals(accountnumber));
             receiverAccount.Balance += amount;
             user.Balance -= amount;
+            var transaction = new Transaction()
+            {
+                UserId = userId,
+                Type = "Transfer",
+                ReceiverAccountNumber =accountnumber,
+                Amount = amount
+            };
+            _dbContext.Transactions.Add(transaction);
             return (_dbContext.SaveChanges() > 0) ? user.Balance : throw new Error("Unable to Transfer");
         }
-      
+
+        public IEnumerable<Transaction> getHistory(string userId)
+        {
+            return _dbContext.Transactions
+                     .Where(t => t.UserId == userId)
+                     .ToList();
+        }
     }
 }
