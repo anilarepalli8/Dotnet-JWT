@@ -28,12 +28,14 @@ namespace JWT_Demo.Repository
             var user = _mapper.Map<User>(registerDto);
             user.UserId= userId;
             user.AccountNumber = accountNumber;
+            user.Password = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
             _dbContext.Users.Add(user);
             return _dbContext.SaveChanges()>0 ? true:false;
         }
         public User login(string userName, string password)
         {
            User user = _dbContext.Users.FirstOrDefault(u => u.Username.Equals(userName) && u.Password.Equals(password));
+            if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.Password))   return null;
             return (user != null) ? user : null;
         }
 

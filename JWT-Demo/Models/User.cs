@@ -16,6 +16,7 @@ namespace JWT_Demo.Models
 
         [Required]
         [StringLength(256)]
+        [Password]
         public string Password { get; set; } // Hashed password
 
         [Required]
