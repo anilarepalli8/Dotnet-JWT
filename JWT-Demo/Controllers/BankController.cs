@@ -24,6 +24,9 @@ namespace JWT_Demo.Controllers
         [Route("register")]
         public async Task<IActionResult> userRegistration(RegisterDto registerDto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState); // Returns validation errors
+
             bool flag = _bankRepository.register(registerDto);
             return flag? Ok("Registration Successful"): BadRequest("Registration Failed");
         }
@@ -68,7 +71,10 @@ namespace JWT_Demo.Controllers
             if (string.IsNullOrEmpty(userId)) return Unauthorized("Invalid or missing token");
 
             decimal balance = _bankRepository.deposit(userId, depositWithdrawDto.Amount);
-            return Ok(new { Balance = balance });
+            return Ok(new
+            {
+                Message = "Deposit Successful",
+                Balance = balance });
         }
 
         [HttpPost("withdraw")]
@@ -81,7 +87,10 @@ namespace JWT_Demo.Controllers
             if (string.IsNullOrEmpty(userId)) return Unauthorized("Invalid or missing token");
 
             decimal balance = _bankRepository.withdraw(userId, depositWithdrawDto.Amount);
-            return Ok(new { Balance = balance });
+            return Ok(new
+            {
+                Message = "Withdraw Successful",
+                Balance = balance });
         }
 
         [HttpPost("transfer")]
@@ -94,7 +103,10 @@ namespace JWT_Demo.Controllers
             if (string.IsNullOrEmpty(userId)) return Unauthorized("Invalid or missing token");
 
             decimal balance = _bankRepository.transfer(userId, transferDto.Amount, transferDto.ReceiverAccountNumber);
-            return Ok(new { Balance = balance });
+            return Ok(new
+            {
+                Message = "Transfer Successful",
+                Balance = balance });
         }
 
         [HttpGet("transactions")]

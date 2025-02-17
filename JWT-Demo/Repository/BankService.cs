@@ -34,9 +34,13 @@ namespace JWT_Demo.Repository
         }
         public User login(string userName, string password)
         {
-           User user = _dbContext.Users.FirstOrDefault(u => u.Username.Equals(userName) && u.Password.Equals(password));
-            if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.Password))   return null;
-            return (user != null) ? user : null;
+            var users = _dbContext.Users.Where(u => u.Username.Equals(userName)).ToList();
+            if (users == null || !users.Any()) return null;
+            foreach (var user in users)
+            {
+                if (BCrypt.Net.BCrypt.Verify(password, user.Password))  return user;
+            }
+            return null;
         }
 
         public User getDetails(string userId)
@@ -76,6 +80,9 @@ namespace JWT_Demo.Repository
 
         public decimal transfer(string userId, decimal amount, int accountnumber)
         {
+            bool accountExists = _dbContext.Users.Any(u => u.AccountNumber.Equals(accountnumber));
+               if (!accountExists) throw new Error("Invalid ReceiverAccountNumber");
+
             var user = _dbContext.Users.FirstOrDefault(u => u.UserId.Equals(userId));
               if (user.Balance < amount) throw new Error("Insufficient Balance to Transfer");
             var receiverAccount = _dbContext.Users.FirstOrDefault(u => u.AccountNumber.Equals(accountnumber));
