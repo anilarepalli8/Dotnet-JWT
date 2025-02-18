@@ -29,6 +29,7 @@ namespace JWT_Demo
             builder.Services.AddSingleton<Jwthelper>();
             builder.Services.AddScoped<GenerateUserID>();
             builder.Services.AddScoped<GenerateAccountNumbeR>();
+            builder.Services.AddScoped<ServiceHelper>();
 
             builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
@@ -92,7 +93,7 @@ namespace JWT_Demo
             // Middleware to check for revoked tokens before authentication
             app.Use(async (context, next) =>
             {
-                var jwtHelper = context.RequestServices.GetRequiredService<Jwthelper>(); 
+                var jwtHelper = context.RequestServices.GetRequiredService<Jwthelper>();
                 var authHeader = context.Request.Headers["Authorization"].ToString();
 
                 if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
@@ -100,12 +101,11 @@ namespace JWT_Demo
                     var token = authHeader.Substring("Bearer ".Length).Trim();
                     if (jwtHelper.IsTokenRevoked(token))
                     {
-                        context.Response.StatusCode = 401; 
+                        context.Response.StatusCode = 401;
                         await context.Response.WriteAsync("Token is revoked. Please log in again.");
                         return;
                     }
                 }
-
                 await next();
             });
 

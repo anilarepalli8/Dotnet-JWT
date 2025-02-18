@@ -10,100 +10,89 @@ namespace JWT_Demo.Repository
     {
         private readonly BankDBContext _dbContext;
         private readonly IMapper _mapper;
-        private readonly GenerateUserID generateUserId;
-        private readonly GenerateAccountNumbeR generateAccountNumber;
-        public BankService(BankDBContext bankDBContext,IMapper mapper, GenerateUserID generateUserID,GenerateAccountNumbeR generateAccountNumbeR) 
+        private readonly GenerateUserID _generateUserId;
+        private readonly GenerateAccountNumbeR _generateAccountNumber;
+        private readonly ServiceHelper _serviceHelper;
+
+        public BankService(
+            BankDBContext bankDBContext,
+            IMapper mapper,
+            GenerateUserID generateUserID,
+            GenerateAccountNumbeR generateAccountNumber,
+            ServiceHelper serviceHelper)
         {
             _dbContext = bankDBContext;
             _mapper = mapper;
-            generateUserId = generateUserID;
-            generateAccountNumber = generateAccountNumbeR;
+            _generateUserId = generateUserID;
+            _generateAccountNumber = generateAccountNumber;
+            _serviceHelper = serviceHelper;
         }
 
-        public bool register(RegisterDto registerDto)
+        public bool Register(RegisterDto registerDto)
         {
-            string userId = generateUserId.GenerateUserId();
-            int accountNumber = generateAccountNumber.GenerateAccountNumber();
-
             var user = _mapper.Map<User>(registerDto);
-            user.UserId= userId;
-            user.AccountNumber = accountNumber;
+            user.UserId = _generateUserId.GenerateUserId();
+            user.AccountNumber = _generateAccountNumber.GenerateAccountNumber();
             user.Password = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
+
             _dbContext.Users.Add(user);
-            return _dbContext.SaveChanges()>0 ? true:false;
+            return _dbContext.SaveChanges() > 0;
         }
-        public User login(string userName, string password)
+
+        public User Login(string userName, string password)
         {
-            var users = _dbContext.Users.Where(u => u.Username.Equals(userName)).ToList();
-            if (users == null || !users.Any()) return null;
-            foreach (var user in users)
+            var user = _dbContext.Users.FirstOrDefault(u => u.Username.Equals(userName));
+            return user != null && BCrypt.Net.BCrypt.Verify(password, user.Password) ? user : null;
+        }
+
+        public User GetDetails(string userId)
+        {
+            return _serviceHelper.GetUser(userId);
+        }
+
+        public decimal Deposit(string userId, decimal amount)
+        {
+            return PerformTransaction(userId, amount, "Deposit");
+        }
+        public decimal Withdraw(string userId, decimal amount)
+        {
+            return PerformTransaction(userId, amount, "Withdrawl");
+        }
+        public decimal Transfer(string userId, decimal amount, int receiverAccountNumber)
+        {
+            return PerformTransaction(userId, amount, "Transfer", receiverAccountNumber);
+        }
+
+        public IEnumerable<Transaction> GetHistory(string userId)
+        {
+            return _dbContext.Transactions.Where(t => t.UserId == userId).ToList();
+        }
+
+        private decimal PerformTransaction(string userId, decimal amount, string transactionType, int? receiverAccountNumber = null)
+        {
+            var user = _serviceHelper.GetUser(userId);
+            _serviceHelper.ValidateBalance(user, amount, transactionType);
+
+            if (transactionType == "Transfer")
             {
-                if (BCrypt.Net.BCrypt.Verify(password, user.Password))  return user;
+                var receiver = _serviceHelper.GetUserByAccountNumberOrThrow(receiverAccountNumber.Value);
+                receiver.Balance += amount;
             }
-            return null;
-        }
 
-        public User getDetails(string userId)
-        {
-            User user = _dbContext.Users.FirstOrDefault(u=>u.UserId.Equals(userId));
-            return (user != null) ? user : null;
-        }
-
-        public decimal deposit(string userId, decimal amount)
-        {
-            var user = _dbContext.Users.FirstOrDefault(u => u.UserId.Equals(userId));
-            user.Balance += amount;
-            var transaction = new Transaction()
+            user.Balance = transactionType switch
             {
-                UserId = userId,
-                Type = "Deposit",
-                Amount = amount
+                "Deposit" => user.Balance + amount,
+                "Withdrawl" => user.Balance - amount,
+                "Transfer" => user.Balance - amount,
+                _ => throw new Error("Invalid Transaction Type")
             };
-            _dbContext.Transactions.Add(transaction);
-            return (_dbContext.SaveChanges()>0) ? user.Balance : throw new Error("Unable to Deposit");
-        }
 
-        public decimal withdraw(string userId,decimal amount)
-        {
-            var user = _dbContext.Users.FirstOrDefault(u => u.UserId.Equals(userId));
-              if (user.Balance < amount) throw new Error("Insufficient Balance");
-            user.Balance -= amount;
-            var transaction = new Transaction()
-            {
-                UserId = userId,
-                Type = "Withdrawl",
-                Amount = amount
-            };
-            _dbContext.Transactions.Add(transaction);
-            return (_dbContext.SaveChanges() > 0) ? user.Balance : throw new Error("Unable to Withdraw");
-        }
+            _serviceHelper.AddTransaction(_dbContext, userId, transactionType, amount, receiverAccountNumber);
+            
+            if (!(_dbContext.SaveChanges() > 0))
+                throw new Error("Unable to complete the transaction");
 
-        public decimal transfer(string userId, decimal amount, int accountnumber)
-        {
-            bool accountExists = _dbContext.Users.Any(u => u.AccountNumber.Equals(accountnumber));
-               if (!accountExists) throw new Error("Invalid ReceiverAccountNumber");
-
-            var user = _dbContext.Users.FirstOrDefault(u => u.UserId.Equals(userId));
-              if (user.Balance < amount) throw new Error("Insufficient Balance to Transfer");
-            var receiverAccount = _dbContext.Users.FirstOrDefault(u => u.AccountNumber.Equals(accountnumber));
-            receiverAccount.Balance += amount;
-            user.Balance -= amount;
-            var transaction = new Transaction()
-            {
-                UserId = userId,
-                Type = "Transfer",
-                ReceiverAccountNumber =accountnumber,
-                Amount = amount
-            };
-            _dbContext.Transactions.Add(transaction);
-            return (_dbContext.SaveChanges() > 0) ? user.Balance : throw new Error("Unable to Transfer");
-        }
-
-        public IEnumerable<Transaction> getHistory(string userId)
-        {
-            return _dbContext.Transactions
-                     .Where(t => t.UserId == userId)
-                     .ToList();
+            return user.Balance;
         }
     }
 }

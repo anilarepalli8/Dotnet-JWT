@@ -6,13 +6,13 @@ namespace JWT_Demo.Repository
 {
     public interface IBankRepository
     {
-        bool register(RegisterDto registerDto);
-        User login(string userName,string password);
-        User getDetails(string userId);
-        decimal deposit(string userId,decimal amount);
-        decimal withdraw(string userId, decimal amount);
-        decimal transfer(string userId, decimal amount, int accountnumber);
-        IEnumerable<Transaction> getHistory(string userId);
+        bool Register(RegisterDto registerDto);
+        User Login(string userName,string password);
+        User GetDetails(string userId);
+        decimal Deposit(string userId,decimal amount);
+        decimal Withdraw(string userId, decimal amount);
+        decimal Transfer(string userId, decimal amount, int accountnumber);
+        IEnumerable<Transaction> GetHistory(string userId);
 
         
     }

@@ -63,9 +63,10 @@ namespace JWT_Demo.HelperMethods
             }
         }
 
-        public bool IsTokenRevoked(string token)
+        public string GetUserIdFromToken(HttpContext httpContext)
         {
-            return _revokedTokens.Contains(token);
+            var token = httpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "").Trim();
+            return ValidateJwtToken(token);
         }
 
         public void RevokeToken(string token)
@@ -73,5 +74,9 @@ namespace JWT_Demo.HelperMethods
             _revokedTokens.Add(token);
         }
 
+        public bool IsTokenRevoked(string token)
+        {
+            return _revokedTokens.Contains(token);
+        }
     }
 }
