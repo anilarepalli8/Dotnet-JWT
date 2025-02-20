@@ -33,12 +33,13 @@ namespace JWT_Demo
 
             builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 
-
+             // Configure the app to validate JWT tokens 
+            // This configure the app to use JWT Bearer Authentication
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
+            })  // Extract the token from the request header
             .AddJwtBearer(options =>
             {
                options.TokenValidationParameters = new TokenValidationParameters
@@ -49,8 +50,8 @@ namespace JWT_Demo
                   ValidateIssuerSigningKey = true,
                   ValidIssuer = builder.Configuration["Jwt:Issuer"],
                   ValidAudience = builder.Configuration["Jwt:Audience"],
-                  IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
-            };
+                   IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+               };
             });
 
             builder.Services.AddAuthorization();
@@ -93,12 +94,14 @@ namespace JWT_Demo
             // Middleware to check for revoked tokens before authentication
             app.Use(async (context, next) =>
             {
+                // retrieve helper service 
                 var jwtHelper = context.RequestServices.GetRequiredService<Jwthelper>();
+                // extracting token from request
                 var authHeader = context.Request.Headers["Authorization"].ToString();
-
                 if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
                 {
                     var token = authHeader.Substring("Bearer ".Length).Trim();
+                    // check token is revoked
                     if (jwtHelper.IsTokenRevoked(token))
                     {
                         context.Response.StatusCode = 401;
@@ -106,6 +109,7 @@ namespace JWT_Demo
                         return;
                     }
                 }
+                // if token valid next middlewear called
                 await next();
             });
 

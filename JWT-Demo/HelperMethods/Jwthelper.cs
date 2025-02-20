@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace JWT_Demo.HelperMethods
@@ -10,6 +11,7 @@ namespace JWT_Demo.HelperMethods
     {
         private readonly IConfiguration _configuration;
         private static HashSet<string> _revokedTokens = new HashSet<string>();
+        private string secretKey;
 
         public Jwthelper(IConfiguration configuration)
         {
@@ -18,7 +20,12 @@ namespace JWT_Demo.HelperMethods
 
         public string GenerateJwtToken(string userId)
         {
+            if (string.IsNullOrEmpty(_configuration["Jwt:Key"]))
+                throw new InvalidOperationException("JWT secret key is missing in configuration.");
+
+            // define security key
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+            // generating signature
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var claims = new List<Claim>
@@ -26,6 +33,7 @@ namespace JWT_Demo.HelperMethods
                 new Claim(ClaimTypes.NameIdentifier, userId)
             };
 
+            // creating JWT token
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
@@ -34,7 +42,15 @@ namespace JWT_Demo.HelperMethods
                 signingCredentials: credentials
             );
 
+            // converting JWT object into string
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+       
+        // extracting the token
+        public string GetUserIdFromToken(HttpContext httpContext)
+        {
+            var token = httpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "").Trim();
+            return ValidateJwtToken(token);
         }
 
         public string ValidateJwtToken(string token)
@@ -63,20 +79,14 @@ namespace JWT_Demo.HelperMethods
             }
         }
 
-        public string GetUserIdFromToken(HttpContext httpContext)
-        {
-            var token = httpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "").Trim();
-            return ValidateJwtToken(token);
-        }
-
         public void RevokeToken(string token)
         {
             _revokedTokens.Add(token);
         }
-
         public bool IsTokenRevoked(string token)
         {
             return _revokedTokens.Contains(token);
         }
+
     }
 }

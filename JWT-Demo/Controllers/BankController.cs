@@ -35,12 +35,12 @@ namespace JWT_Demo.Controllers
         {
             var user = _bankRepository.Login(loginDto.Username, loginDto.Password);
             if (user == null) return Unauthorized("Invalid username or password");
-
+              
             var token = _jwthelper.GenerateJwtToken(user.UserId);
             return Ok(new { Message = "Login Successful", Token = token });
         }
 
-        [HttpGet("details"), Authorize]
+        [HttpGet("details")]
         public IActionResult UserDetails()
         {
             var userId = _jwthelper.GetUserIdFromToken(HttpContext);
